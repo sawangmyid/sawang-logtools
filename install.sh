@@ -15,7 +15,7 @@ if [ -f "$HOME/.bashrc" ]; then
 fi
 
 # 2. Deteksi Skenario Instalasi (Apakah folder lokal 'logtools' tersedia di luar target dir?)
-if [ -d "logtools" ] && [ "$(realpath logtools)" != "$DIR_TARGET" ] && [ -f "logtools/cekspek" ] && [ -f "logtools/cekport" ] && [ -f "logtools/cekidpel" ]; then
+if [ -d "logtools" ] && [ "$(realpath logtools 2>/dev/null)" != "$DIR_TARGET" ] && [ -f "logtools/cekspek" ] && [ -f "logtools/cekport" ] && [ -f "logtools/cekidpel" ]; then
     echo "[*] Mendeteksi folder lokal eksternal. Menyalin komponen direktori..."
     cp logtools/cekspek "$DIR_TARGET/"
     cp logtools/cekport "$DIR_TARGET/"
@@ -86,7 +86,7 @@ df -h | awk 'NR>1 {print $2, $4, $5, $6}' | while read total avail use mount; do
 done
 EOF
 
-# --- INJEKSI CEKPORT (VERSI 100% AUTOMATIC & UNIVERSAL) ---
+    # --- INJEKSI CEKPORT (VERSI 100% AUTOMATIC & UNIVERSAL) ---
     cat << 'EOF' > "$DIR_TARGET/cekport"
 #!/bin/bash
 port_input=$1
@@ -129,7 +129,6 @@ else
         echo "Cmd Line    : $full_cmd"
         
         # 3. DETEKSI OTOMATIS CONFIG (.conf, .cfg, .ini, .yaml, .xml) YANG SEDANG DIBUKA
-        # Mencari dari cmdline atau file descriptor yang sedang di-hold oleh proses
         detected_configs=$(echo "$full_cmd" | grep -oE '[^ ]+\.(conf|cfg|ini|yaml|yml|xml|properties)' | sort -u | xargs 2>/dev/null)
         if [ -z "$detected_configs" ]; then
             detected_configs=$(sudo ls -l /proc/$pid/fd 2>/dev/null | grep -oE '/.*\.(conf|cfg|ini|yaml|yml|xml|properties)' | sort -u | xargs)
@@ -138,9 +137,8 @@ else
             echo "Config File : $detected_configs"
         fi
         
-        # 4. DETEKSI OTOMATIS DOCUMENT ROOT / APP DIR (Mencari path /opt atau /var/www secara dinamis)
+        # 4. DETEKSI OTOMATIS DOCUMENT ROOT / APP DIR
         detected_root=$(echo "$full_cmd" | grep -oE '(/opt/[a-zA-Z0-9_-]+|/var/www/[a-zA-Z0-9_-]+|/home/[a-zA-Z0-9_-]+/web)' | sort -u | head -n1)
-        # Jika tidak ketemu di cmdline, cek lokasi working directory (cwd) proses tersebut
         if [ -z "$detected_root" ]; then
             detected_root=$(sudo readlink -f /proc/$pid/cwd 2>/dev/null)
         fi
@@ -151,7 +149,8 @@ else
     fi
 fi
 EOF
-    # --- INJEKSI CEKIDPEL ---
+
+    # --- INJEKSI CEKIDPEL (VERSI ASLI SESUAI PERSETUJUAN AWAL) ---
     cat << 'EOF' > "$DIR_TARGET/cekidpel"
 #!/bin/bash
 idpel=$1
@@ -209,6 +208,7 @@ else
       echo "$TARGET_PATHS" | xargs -I {} sudo zgrep -H "$idpel" "{}" 2>/dev/null || echo "Tidak ditemukan data log." ) | less -X -F
 fi
 EOF
+
 fi
 
 # 3. Memberikan Hak Eksekusi ke Semua File Baru
