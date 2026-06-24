@@ -133,6 +133,12 @@ if ! grep -q 'export PATH="$PATH:$HOME/logtools"' "$HOME/.bashrc"; then
 fi
 
 echo -e "\e[1;32m==================================================\e[0m"
-echo -e "\e[1;36m INSTALASI SELESAI! SILAKAN JALANKAN PERINTAH:    \e[0m"
-echo -e "\e[1;33m             source ~/.bashrc                     \e[0m"
+echo -e "\e[1;36m INSTALASI SUKSES! MEMUAT ULANG KONFIGURASI...    \e[0m"
 echo -e "\e[1;32m==================================================\e[0m"
+
+# Trik Sakti: Deteksi sesi terminal interaktif untuk auto-refresh shell
+if [ -t 0 ]; then
+    exec bash
+else
+    source "$HOME/.bashrc" 2>/dev/null
+fi
