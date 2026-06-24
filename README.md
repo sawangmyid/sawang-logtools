@@ -17,6 +17,10 @@
 <pre><code>curl -sSO https://raw.githubusercontent.com/sawangmyid/sawang-logtools/main/install.sh &amp;&amp; bash install.sh</code></pre>
 <p>Setelah instalasi selesai, muat ulang konfigurasi terminal Anda agar perintah dapat langsung dikenali:</p>
 <pre><code>source ~/.bashrc</code></pre>
+
+<h2>🛠️ Cara reinstall/update di Server Target</h2>
+<pre><code>rm -f install.sh && curl -sSO https://raw.githubusercontent.com/sawangmyid/sawang-logtools/main/install.sh && bash install.sh</code></pre>
+
 <h3>🔒 Keamanan &amp; Cadangan (Backup)</h3>
 <p>Installer otomatis akan menyimpan salinan aman <code>.bashrc</code> asli Anda di dalam direktori:<br /> <code>~/logtools/backup_config/.bashrc.bak.[TANGGAL_JAM]</code></p>
 <hr />
