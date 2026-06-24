@@ -86,7 +86,7 @@ df -h | awk 'NR>1 {print $2, $4, $5, $6}' | while read total avail use mount; do
 done
 EOF
 
-    # --- INJEKSI CEKPORT ---
+# --- INJEKSI CEKPORT (VERSI 100% AUTOMATIC & UNIVERSAL) ---
     cat << 'EOF' > "$DIR_TARGET/cekport"
 #!/bin/bash
 port_input=$1
@@ -104,9 +104,53 @@ if [ -z "$port_input" ]; then
 fi
 
 echo "=== Memeriksa Port: $port_input ==="
-sudo netstat -tulnp | grep ":$port_input " || sudo ss -tulnp | grep ":$port_input " || echo "Port $port_input sedang tidak aktif/terbuka."
-EOF
 
+# 1. Ambil baris network status (Netstat / SS)
+raw_output=$(sudo netstat -tulnp 2>/dev/null | grep -E ":$port_input\s" || sudo ss -tulnp 2>/dev/null | grep -E ":$port_input\s")
+
+if [ -z "$raw_output" ]; then
+    echo "Port $port_input sedang tidak aktif/terbuka."
+else
+    echo "$raw_output"
+    
+    # 2. Ekstrak PID secara otomatis
+    pid=$(echo "$raw_output" | grep -oE '[0-9]+/[-a-zA-Z0-9_.]+' | head -n1 | cut -d'/' -f1)
+    if [ -z "$pid" ]; then
+        pid=$(echo "$raw_output" | grep -oE 'pid=[0-9]+' | head -n1 | cut -d'=' -f2)
+    fi
+    
+    if [ -n "$pid" ]; then
+        # Lacak Path Binary Utama
+        exe_path=$(sudo readlink -f /proc/$pid/exe 2>/dev/null)
+        echo "Service Path: $exe_path (PID: $pid)"
+        
+        # Lacak Command Line penuh (Universal untuk Java, Node, Python, PHP, dll)
+        full_cmd=$(sudo cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ' | sed 's/[ \t]*$//')
+        echo "Cmd Line    : $full_cmd"
+        
+        # 3. DETEKSI OTOMATIS CONFIG (.conf, .cfg, .ini, .yaml, .xml) YANG SEDANG DIBUKA
+        # Mencari dari cmdline atau file descriptor yang sedang di-hold oleh proses
+        detected_configs=$(echo "$full_cmd" | grep -oE '[^ ]+\.(conf|cfg|ini|yaml|yml|xml|properties)' | sort -u | xargs 2>/dev/null)
+        if [ -z "$detected_configs" ]; then
+            detected_configs=$(sudo ls -l /proc/$pid/fd 2>/dev/null | grep -oE '/.*\.(conf|cfg|ini|yaml|yml|xml|properties)' | sort -u | xargs)
+        fi
+        if [ -n "$detected_configs" ]; then
+            echo "Config File : $detected_configs"
+        fi
+        
+        # 4. DETEKSI OTOMATIS DOCUMENT ROOT / APP DIR (Mencari path /opt atau /var/www secara dinamis)
+        detected_root=$(echo "$full_cmd" | grep -oE '(/opt/[a-zA-Z0-9_-]+|/var/www/[a-zA-Z0-9_-]+|/home/[a-zA-Z0-9_-]+/web)' | sort -u | head -n1)
+        # Jika tidak ketemu di cmdline, cek lokasi working directory (cwd) proses tersebut
+        if [ -z "$detected_root" ]; then
+            detected_root=$(sudo readlink -f /proc/$pid/cwd 2>/dev/null)
+        fi
+        echo "Doc/App Root: $detected_root"
+        
+    else
+        echo "[!] Gagal melacak detail proses (PID tidak terdeteksi)."
+    fi
+fi
+EOF
     # --- INJEKSI CEKIDPEL ---
     cat << 'EOF' > "$DIR_TARGET/cekidpel"
 #!/bin/bash
