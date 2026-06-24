@@ -14,14 +14,14 @@ if [ -f "$HOME/.bashrc" ]; then
     echo "[+] Backup .bashrc berhasil diamankan."
 fi
 
-# 2. Deteksi Skenario Instalasi (Apakah folder lokal 'logtools' tersedia?)
-if [ -d "logtools" ] && [ -f "logtools/cekspek" ] && [ -f "logtools/cekport" ] && [ -f "logtools/cekidpel" ]; then
-    echo "[*] Mendeteksi folder lokal. Menyalin komponen direktori..."
+# 2. Deteksi Skenario Instalasi (Apakah folder lokal 'logtools' tersedia di luar target dir?)
+if [ -d "logtools" ] && [ "$(realpath logtools)" != "$DIR_TARGET" ] && [ -f "logtools/cekspek" ] && [ -f "logtools/cekport" ] && [ -f "logtools/cekidpel" ]; then
+    echo "[*] Mendeteksi folder lokal eksternal. Menyalin komponen direktori..."
     cp logtools/cekspek "$DIR_TARGET/"
     cp logtools/cekport "$DIR_TARGET/"
     cp logtools/cekidpel "$DIR_TARGET/"
 else
-    echo "[*] Folder lokal tidak ditemukan. Mengekstrak komponen langsung dari skrip..."
+    echo "[*] Melakukan deployment/update komponen langsung dari skrip..."
     
     # --- INJEKSI CEKSPEK (VERSION FIX SEJAJAR + MULTI IP + STORAGE MONITOR + SSH PORT DETECTOR) ---
     cat << 'EOF' > "$DIR_TARGET/cekspek"
@@ -86,7 +86,7 @@ df -h | awk 'NR>1 {print $2, $4, $5, $6}' | while read total avail use mount; do
 done
 EOF
 
-    # --- INJEKSI CEKPORT (VERSI ASLI SESUAI PERSETUJUAN AWAL) ---
+    # --- INJEKSI CEKPORT ---
     cat << 'EOF' > "$DIR_TARGET/cekport"
 #!/bin/bash
 port_input=$1
@@ -107,7 +107,7 @@ echo "=== Memeriksa Port: $port_input ==="
 sudo netstat -tulnp | grep ":$port_input " || sudo ss -tulnp | grep ":$port_input " || echo "Port $port_input sedang tidak aktif/terbuka."
 EOF
 
-    # --- INJEKSI CEKIDPEL (VERSI ASLI SESUAI PERSETUJUAN AWAL) ---
+    # --- INJEKSI CEKIDPEL ---
     cat << 'EOF' > "$DIR_TARGET/cekidpel"
 #!/bin/bash
 idpel=$1
@@ -165,7 +165,6 @@ else
       echo "$TARGET_PATHS" | xargs -I {} sudo zgrep -H "$idpel" "{}" 2>/dev/null || echo "Tidak ditemukan data log." ) | less -X -F
 fi
 EOF
-
 fi
 
 # 3. Memberikan Hak Eksekusi ke Semua File Baru
