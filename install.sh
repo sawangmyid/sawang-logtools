@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo -e "\e[1;32m==================================================\e[0m"
-echo -e "\e[1;36m       LOGTOOLS SUITE v1.0 HYBRID INSTALLER       \e[0m"
+echo -e "\e[1;36m       LOGTOOLS SUITE v1.1 HYBRID INSTALLER       \e[0m"
 echo -e "\e[1;33m       Author: Sawang (https://sawang.my.id)      \e[0m"
 echo -e "\e[1;32m==================================================\e[0m"
 
