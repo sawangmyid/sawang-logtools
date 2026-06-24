@@ -23,7 +23,7 @@ if [ -d "logtools" ] && [ -f "logtools/cekspek" ] && [ -f "logtools/cekport" ] &
 else
     echo "[*] Folder lokal tidak ditemukan. Mengekstrak komponen langsung dari skrip..."
     
-    # --- INJEKSI CEKSPEK ---
+    # --- INJEKSI CEKSPEK (VERSION FIX SEJAJAR + MULTI IP + STORAGE MONITOR + SSH PORT DETECTOR) ---
     cat << 'EOF' > "$DIR_TARGET/cekspek"
 #!/bin/bash
 arg=$1
@@ -37,12 +37,56 @@ fi
 
 echo "=== Spesifikasi Server ==="
 echo "OS      : $(uname -o) $(uname -r)"
+
+# Loop untuk mencetak semua IP Private agar sejajar
+first_ip=true
+for ip in $(hostname -I 2>/dev/null); do
+    if [ "$first_ip" = "true" ]; then
+        echo "IP Priv : $ip"
+        first_ip=false
+    else
+        echo "          $ip"
+    fi
+done
+
+echo "IP Pub  : $(curl -s --connect-timeout 2 ifconfig.me || echo 'Offline/No Public IP')"
+
+# Deteksi Port SSH yang sedang aktif LISTEN
+ssh_ports=$(sudo netstat -tulnp 2>/dev/null | grep -E 'sshd|ssh' | awk '{print $4}' | cut -d':' -f2 | sort -nu | xargs || \
+             sudo ss -tulnp 2>/dev/null | grep -E 'sshd|ssh' | awk '{print $4}' | cut -d':' -f2 | sort -nu | xargs)
+
+if [ -z "$ssh_ports" ]; then
+    echo -e "SSH Port: \e[1;31m[!!! SSH NOT ACTIVE !!!]\e[0m"
+else
+    echo "SSH Port: $ssh_ports (Active)"
+fi
+
 echo "CPU     : $(lscpu | grep 'Model name' | cut -d':' -f2 | sed 's/^[ \t]*//' 2>/dev/null || echo 'ARM/Embedded Processor')"
+echo "CPU Load: $(uptime | awk -F'load average:' '{print $2}' | sed 's/^[ \t]*//')"
 echo "RAM     : $(free -h 2>/dev/null | grep Mem | awk '{print $2}' || echo 'N/A')"
-echo "Storage : $(df -h / | awk 'NR==2 {print $2}')"
+
+# Cetak baris pertama Storage dan looping sejajar
+first_line=true
+df -h | awk 'NR>1 {print $2, $4, $5, $6}' | while read total avail use mount; do
+    if [[ "$mount" == "/" || "$mount" =~ "NAS" || "$mount" =~ "BACKUPDIR" || "$mount" =~ "sd" ]]; then
+        avail_num=$(echo $avail | sed 's/[GgMmKk]//g' | cut -d',' -f1 | cut -d'.' -f1)
+        
+        warning=""
+        if [[ "$avail" =~ [Gg] && $avail_num -lt 5 ]] || [[ "$avail" =~ [MmKk] ]]; then
+            warning=" \e[1;31m[!!! LOW SPACE - CRITICAL !!!]\e[0m"
+        fi
+        
+        if [ "$first_line" = "true" ]; then
+            echo -e "Storage : $mount (Total $total | Avail $avail | Used $use)$warning"
+            first_line=false
+        else
+            echo -e "          $mount (Total $total | Avail $avail | Used $use)$warning"
+        fi
+    fi
+done
 EOF
 
-    # --- INJEKSI CEKPORT ---
+    # --- INJEKSI CEKPORT (VERSI ASLI SESUAI PERSETUJUAN AWAL) ---
     cat << 'EOF' > "$DIR_TARGET/cekport"
 #!/bin/bash
 port_input=$1
@@ -63,7 +107,7 @@ echo "=== Memeriksa Port: $port_input ==="
 sudo netstat -tulnp | grep ":$port_input " || sudo ss -tulnp | grep ":$port_input " || echo "Port $port_input sedang tidak aktif/terbuka."
 EOF
 
-    # --- INJEKSI CEKIDPEL ---
+    # --- INJEKSI CEKIDPEL (VERSI ASLI SESUAI PERSETUJUAN AWAL) ---
     cat << 'EOF' > "$DIR_TARGET/cekidpel"
 #!/bin/bash
 idpel=$1
